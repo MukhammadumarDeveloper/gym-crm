@@ -7,6 +7,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import uz.wcaproject.model.Trainee;
+import uz.wcaproject.model.Trainer;
+import uz.wcaproject.model.Training;
+import uz.wcaproject.service.TraineeService;
+import uz.wcaproject.service.TrainerService;
+import uz.wcaproject.service.TrainingService;
 
 import java.util.List;
 import java.util.Optional;
