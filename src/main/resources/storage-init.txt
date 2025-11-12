@@ -1,0 +1,9 @@
+TRAINING_TYPE:1:Fitness
+TRAINING_TYPE:2:Yoga
+TRAINING_TYPE:3:Zumba
+TRAINING_TYPE:4:Stretching
+TRAINING_TYPE:5:Resistance
+TRAINER:1:John:Doe:Fitness
+TRAINER:2:Jane:Smith:Yoga
+TRAINEE:1:Alice:Johnson:1990-05-15:123 Main St
+TRAINEE:2:Bob:Williams:1985-08-20:456 Oak Ave
