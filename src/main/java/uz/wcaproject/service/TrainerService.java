@@ -1,45 +1,49 @@
 package uz.wcaproject.service;
 
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import uz.wcaproject.dao.TrainerDAO;
+import uz.wcaproject.generators.PasswordGenerator;
+import uz.wcaproject.generators.UserNameGenerator;
 import uz.wcaproject.model.Trainer;
-import uz.wcaproject.model.User;
 
 import java.util.List;
 import java.util.Optional;
+
 @Service
 public class TrainerService {
+
     private static final Logger logger = LoggerFactory.getLogger(TrainerService.class);
 
-    private TrainerDAO trainerDAO;
-    private Storage storage;
+    private final TrainerDAO trainerDAO;
+    private final PasswordGenerator passwordGenerator;
+    private final UserNameGenerator userNameGenerator;
+
 
     @Autowired
-    public void setTrainerDAO(TrainerDAO trainerDAO) {
+    public TrainerService(TrainerDAO trainerDAO, PasswordGenerator passwordGenerator, UserNameGenerator userNameGenerator) {
         this.trainerDAO = trainerDAO;
-    }
-
-    @Autowired
-    public void setStorage(Storage storage) {
-        this.storage = storage;
+        this.passwordGenerator = passwordGenerator;
+        this.userNameGenerator = userNameGenerator;
     }
 
     public Trainer createTrainer(Trainer trainer) {
         logger.info("Creating new trainer profile for: {} {}",
-                trainer.getUser().getFirstName(), trainer.getUser().getLastName());
+                trainer.getFirstName(), trainer.getLastName());
 
-        User user = trainer.getUser();
-        String username = storage.generateUsername(user.getFirstName(), user.getLastName());
-        String password = storage.generatePassword();
+        String username = userNameGenerator.generateUsername(
+                trainer.getFirstName(),
+                trainer.getLastName(),
+                name -> trainerDAO.findByUsername(name).isPresent()
+        );
 
-        user.setUsername(username);
-        user.setPassword(password);
-        user.setIsActive(true);
+        String password = passwordGenerator.generatePassword();
 
-        storage.getUserStorage().put(username, user);
+        trainer.setUsername(username);
+        trainer.setPassword(password);
+        trainer.setIsActive(true);
 
         Trainer created = trainerDAO.create(trainer);
         logger.info("Trainer profile created successfully with username: {}", username);
@@ -47,20 +51,25 @@ public class TrainerService {
     }
 
     public Trainer updateTrainer(Trainer trainer) {
-        logger.info("Updating trainer profile with id: {}", trainer.getId());
+        logger.info("Updating trainer profile with username: {}", trainer.getUsername());
 
-        Optional<Trainer> existing = trainerDAO.findById(trainer.getId());
-        if (!existing.isPresent()) {
-            logger.error("Trainer not found with id: {}", trainer.getId());
-            throw new IllegalArgumentException("Trainer not found");
-        }
+        Trainer existing = trainerDAO.findByUsername(trainer.getUsername())
+                .orElseThrow(() -> {
+                    logger.error("Trainer not found with username: {}", trainer.getUsername());
+                    return new IllegalArgumentException("Trainer not found");
+                });
 
-        Trainer updated = trainerDAO.update(trainer);
+        existing.setFirstName(trainer.getFirstName());
+        existing.setLastName(trainer.getLastName());
+        existing.setSpecialization(trainer.getSpecialization());
+        existing.setIsActive(trainer.getIsActive());
+
+        Trainer updated = trainerDAO.update(existing);
         logger.info("Trainer profile updated successfully");
         return updated;
     }
 
-    public Optional<Trainer> getTrainerById(Long id) {
+    public Optional<Trainer> getTrainerById(String id) {
         logger.debug("Retrieving trainer by id: {}", id);
         return trainerDAO.findById(id);
     }
