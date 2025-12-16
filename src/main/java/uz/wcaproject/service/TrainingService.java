@@ -4,18 +4,21 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import uz.wcaproject.dao.TrainingDAO;
 import uz.wcaproject.model.Training;
 
 import java.util.List;
 import java.util.Optional;
+
 @Service
 public class TrainingService {
     private static final Logger logger = LoggerFactory.getLogger(TrainingService.class);
 
-    private TrainingDAO trainingDAO;
+    private final TrainingDAO trainingDAO;
+
 
     @Autowired
-    public void setTrainingDAO(TrainingDAO trainingDAO) {
+    public TrainingService(TrainingDAO trainingDAO) {
         this.trainingDAO = trainingDAO;
     }
 
@@ -28,7 +31,7 @@ public class TrainingService {
         return created;
     }
 
-    public Optional<Training> getTrainingById(Long id) {
+    public Optional<Training> getTrainingById(String id) {
         logger.debug("Retrieving training by id: {}", id);
         return trainingDAO.findById(id);
     }
@@ -38,12 +41,12 @@ public class TrainingService {
         return trainingDAO.findAll();
     }
 
-    public List<Training> getTrainingsByTraineeId(Long traineeId) {
+    public List<Training> getTrainingsByTraineeId(String traineeId) {
         logger.debug("Retrieving trainings for trainee id: {}", traineeId);
         return trainingDAO.findByTraineeId(traineeId);
     }
 
-    public List<Training> getTrainingsByTrainerId(Long trainerId) {
+    public List<Training> getTrainingsByTrainerId(String trainerId) {
         logger.debug("Retrieving trainings for trainer id: {}", trainerId);
         return trainingDAO.findByTrainerId(trainerId);
     }

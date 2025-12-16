@@ -4,8 +4,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import uz.wcaproject.dao.TraineeDAO;
+import uz.wcaproject.generators.PasswordGenerator;
+import uz.wcaproject.generators.UserNameGenerator;
 import uz.wcaproject.model.Trainee;
-import uz.wcaproject.model.User;
 
 import java.util.List;
 import java.util.Optional;
@@ -14,32 +16,32 @@ import java.util.Optional;
 public class TraineeService {
     private static final Logger logger = LoggerFactory.getLogger(TraineeService.class);
 
-    private TraineeDAO traineeDAO;
-    private Storage storage;
+    private final TraineeDAO traineeDAO;
+
+    private final PasswordGenerator passwordGenerator;
+
+    private final UserNameGenerator userNameGenerator;
 
     @Autowired
-    public void setTraineeDAO(TraineeDAO traineeDAO) {
+    public TraineeService(TraineeDAO traineeDAO, UserNameGenerator userNameGenerator, PasswordGenerator passwordGenerator) {
         this.traineeDAO = traineeDAO;
-    }
-
-    @Autowired
-    public void setStorage(Storage storage) {
-        this.storage = storage;
+        this.userNameGenerator = userNameGenerator;
+        this.passwordGenerator = passwordGenerator;
     }
 
     public Trainee createTrainee(Trainee trainee) {
-        logger.info("Creating new trainee profile for: {} {}",
-                trainee.getUser().getFirstName(), trainee.getUser().getLastName());
+        logger.info("Creating new trainee profile for: {} {}", trainee.getFirstName(), trainee.getLastName());
 
-        User user = trainee.getUser();
-        String username = storage.generateUsername(user.getFirstName(), user.getLastName());
-        String password = storage.generatePassword();
 
-        user.setUsername(username);
-        user.setPassword(password);
-        user.setIsActive(true);
+        String username = userNameGenerator.generateUsername(
+                trainee.getFirstName(),
+                trainee.getLastName(),
+                (name) -> traineeDAO.findByUsername(name).isPresent());
+        String password = passwordGenerator.generatePassword();
 
-        storage.getUserStorage().put(username, user);
+        trainee.setUsername(username);
+        trainee.setPassword(password);
+        trainee.setIsActive(true);
 
         Trainee created = traineeDAO.create(trainee);
         logger.info("Trainee profile created successfully with username: {}", username);
@@ -49,30 +51,30 @@ public class TraineeService {
     public Trainee updateTrainee(Trainee trainee) {
         logger.info("Updating trainee profile with id: {}", trainee.getId());
 
-        Optional<Trainee> existing = traineeDAO.findById(trainee.getId());
-        if (!existing.isPresent()) {
-            logger.error("Trainee not found with id: {}", trainee.getId());
-            throw new IllegalArgumentException("Trainee not found");
-        }
+        Trainee existing = traineeDAO.findByUsername(trainee.getUsername())
+                .orElseThrow(() -> {
+                    logger.error("Trainee not found with id: {}", trainee.getId());
+                    return new IllegalArgumentException("Trainee not found");
+                });
+        existing.setFirstName(trainee.getFirstName());
+        existing.setLastName(trainee.getLastName());
+        existing.setDateOfBirth(trainee.getDateOfBirth());
+        existing.setAddress(trainee.getAddress());
+        existing.setIsActive(trainee.getIsActive());
 
-        Trainee updated = traineeDAO.update(trainee);
+        Trainee updated = traineeDAO.update(existing);
         logger.info("Trainee profile updated successfully");
         return updated;
     }
 
-    public void deleteTrainee(Long id) {
-        logger.info("Deleting trainee profile with id: {}", id);
+    public void deleteTrainee(String username) {
+        logger.info("Deleting trainee profile with username: {}", username);
 
-        Optional<Trainee> trainee = traineeDAO.findById(id);
-        if (trainee.isPresent() && trainee.get().getUser() != null) {
-            storage.getUserStorage().remove(trainee.get().getUser().getUsername());
-        }
-
-        traineeDAO.delete(id);
+        traineeDAO.delete(username);
         logger.info("Trainee profile deleted successfully");
     }
 
-    public Optional<Trainee> getTraineeById(Long id) {
+    public Optional<Trainee> getTraineeById(String id) {
         logger.debug("Retrieving trainee by id: {}", id);
         return traineeDAO.findById(id);
     }
